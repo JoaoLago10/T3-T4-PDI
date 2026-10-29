@@ -1,0 +1,51 @@
+frame_idx,true_label
+0,backpack
+30,backpack
+65,backpack
+100,backpack
+130,backpack
+165,backpack
+200,water bottle
+235,water bottle
+265,water bottle
+300,water bottle
+335,computer keyboard
+365,computer keyboard
+400,computer keyboard
+435,computer keyboard
+470,computer keyboard
+500,computer keyboard
+535,computer keyboard
+570,water bottle
+600,water bottle
+635,backpack
+670,backpack
+705,backpack
+735,backpack
+770,backpack
+805,backpack
+835,backpack
+870,backpack
+905,backpack
+940,backpack
+970,backpack
+1005,water bottle
+1040,water bottle
+1070,water bottle
+1105,computer keyboard
+1140,computer keyboard
+1175,computer keyboard
+1205,water bottle
+1240,water bottle
+1275,backpack
+1305,backpack
+1340,backpack
+1375,backpack
+1410,backpack
+1440,backpack
+1475,backpack
+1510,backpack
+1540,water bottle
+1575,computer keyboard
+1610,computer keyboard
+1645,computer keyboard

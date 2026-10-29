@@ -1,0 +1,166 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{setspace}
+
+\geometry{margin=2.4cm}
+\onehalfspacing
+
+\title{Roteiro da apresentação\\Classificadores ImageNet em vídeo e webcam}
+\author{João, Wesley e André}
+\date{Duração prevista: 17 minutos}
+
+\begin{document}
+\maketitle
+
+\noindent
+A apresentação tem 17 slides. O texto de cada slide é curto de propósito: a explicação fica na fala.
+João conduz os slides 1 a 6, Wesley os slides 7 a 9 e André os slides 10 a 16.
+O slide 17, de referências, fica na tela durante as perguntas.
+Os tempos são cumulativos e podem variar cerca de 1 minuto.
+
+\section*{João --- slides 1 a 6 (0:00--5:40)}
+
+\subsection*{Slide 1. Capa (0:00--0:40)}
+
+Bom dia. Eu sou o João, e comigo estão o Wesley e o André. A pergunta desta etapa cabe na capa:
+qual modelo acerta e qual responde a tempo? Comparamos 3 redes prontas do ImageNet, ResNet-50,
+EfficientNet-B0 e Vision Transformer, sem um novo treinamento. A cena tem mochila, garrafa e
+teclado. Os objetos mudam de distância, são cortados na borda e aparecem juntos.
+
+\subsection*{Slide 2. Quatro paradas (0:40--1:10)}
+
+O caminho tem 4 paradas. 1º, o olhar: 1.000 classes e 1 decisão por quadro. 2º, os 3 modelos,
+com pesos e transforms oficiais. 3º, o teste: vídeo com rótulo e webcam só com tempo. 4º, a
+escolha entre top-1, top-5 e FPS, tudo medido na CPU. Eu fico nas 2 primeiras paradas. O Wesley
+fecha os modelos e explica o experimento. O André mostra o placar.
+
+\subsection*{Slide 3. A mesma cena, duas perguntas (1:10--2:20)}
+
+Há 2 perguntas. No vídeo gravado, queremos saber se a classe principal está correta. Por isso
+existe um rótulo. Na webcam, a pergunta muda: a resposta chega enquanto a cena ainda está na
+frente da câmera? O vídeo dura 28,7 s e tem resolução 464 por 832. A webcam, testada no Windows,
+entrega 640 por 480. A câmera muda a distância, corta os objetos e, muitas vezes, mostra mais de
+1 objeto no mesmo quadro.
+
+\subsection*{Slide 4. Top-1 e top-5 (2:20--3:40)}
+
+O ImageNet deste experimento tem 1.000 classes. O modelo não pode dizer ``não sei''. Ele sempre
+escolhe a categoria mais parecida. Top-1 é a 1ª classe, e ela precisa ser a do rótulo. Top-5
+significa que a classe certa está entre as 5 primeiras, mesmo sem vencer. Isso separa um erro
+grave de uma dúvida entre vizinhos. Mochila compete com mala postal. Teclado compete com barra
+de espaço. Garrafa compete com jarro. O nome no rótulo precisa ser o oficial, como
+\texttt{computer keyboard}.
+
+\subsection*{Slide 5. Três modos de ler (3:40--4:30)}
+
+Antes do detalhe, o mapa. A ResNet lê por convolução e guarda um atalho: 25,6 milhões de
+parâmetros, pesos V2. A EfficientNet também é convolucional, mas cresce com equilíbrio e cabe
+em 5,3 milhões, pesos V1. O ViT troca o filtro pela atenção, corta a imagem em peças de 16 por
+16 e chega a 86,6 milhões, também com pesos V1. Os 3 falam o vocabulário do ImageNet. O custo
+de ler a imagem é que muda.
+
+\subsection*{Slide 6. ResNet-50 guarda a entrada (4:30--5:40)}
+
+Na rede convolucional, as 1ªs camadas veem bordas e texturas. As seguintes juntam essas pistas
+em partes de objetos. Se a rede fica muito funda, cada bloco pode atrapalhar o que já foi
+aprendido. A ResNet aprende só a correção. A saída é essa correção somada à entrada, como está
+no desenho: \(y = F(x) + x\). A seta verde leva \(x\) direto à saída. São 50 camadas com pesos,
+\texttt{IMAGENET1K\_V2}, e a transformação oficial desses pesos. Passo ao Wesley.
+
+\section*{Wesley --- slides 7 a 9 (5:40--10:30)}
+
+\subsection*{Slide 7. EfficientNet nas três direções (5:40--7:10)}
+
+Eu sou o Wesley. Para aumentar uma rede convolucional, dá para empilhar camadas, alargar os
+filtros ou entregar uma imagem maior. Mexer em 1 direção só desperdiça capacidade. A EfficientNet
+faz as 3 crescerem juntas: profundidade, largura e resolução. A B0 é a menor da família. Ela usa
+convoluções separáveis e blocos invertidos, próprios de redes leves. 5,3 milhões de parâmetros
+são cerca de 1/5 da ResNet. A aposta não é vencer toda cena difícil. A aposta é devolver uma
+resposta utilizável em bem menos tempo. Os pesos são \texttt{IMAGENET1K\_V1}, com a transformação
+que os acompanha.
+
+\subsection*{Slide 8. ViT em peças (7:10--8:50)}
+
+O Vision Transformer corta a imagem em quadrados de 16 por 16 pixels, como a grade deste slide.
+Cada quadrado vira um token, e a atenção permite que peças distantes se influenciem desde cedo.
+A variante Base tem 86,6 milhões de parâmetros, mais de 3 vezes a ResNet. Em CPU, esse número de
+tokens cobra tempo a cada quadro. Os pesos também são \texttt{IMAGENET1K\_V1}, com a transformação
+própria do ViT. O vocabulário é o mesmo. O preparo da imagem, não: cada rede recebe o tamanho
+para o qual foi treinada.
+
+\subsection*{Slide 9. O teste em uma olhada (8:50--10:30)}
+
+Os 4 números fecham o método. O vídeo tem 1.648 quadros. Classificamos 1 a cada 5, então são
+330 inferências por modelo. 50 quadros receberam rótulo: 25 mochilas, 13 teclados e 12 garrafas.
+Quando há 2 objetos, o rótulo fica com o principal, não com tudo o que aparece. Essa regra importa
+na hora de julgar o erro. Antes de cronometrar, cada modelo faz 10 inferências de aquecimento.
+Os quadros sem inferência continuam no vídeo e apenas repetem a última classe, para a imagem não piscar.
+
+A webcam não apareceu dentro do Linux do WSL. O teste ao vivo foi no Windows, câmera 0. A janela
+mostra o modelo, o top-3 e o FPS. A tecla 1 chama a ResNet, a 2 chama a EfficientNet e a 3 chama
+o ViT. A tecla Q grava o resumo. Cada rede só é carregada na 1ª vez em que é escolhida. Com o
+protocolo fechado, o André mostra o que aconteceu.
+
+\section*{André --- slides 10 a 16 (10:30--17:10)}
+
+\subsection*{Slide 10. O placar (10:30--12:00)}
+
+Eu sou o André. No vídeo, ResNet e ViT empatam em 56\% de top-1. O empate acaba no custo. A ResNet
+leva 114 ms e faz 8,8 inferências por segundo. O ViT leva 278 ms e fica em 3,6. O EfficientNet
+acerta 26\%, mas responde em 39 ms: 25,5 quadros por segundo. No top-5, a ResNet chega a 88\%,
+o ViT a 82\% e o EfficientNet a 74\%. A classe certa costuma estar perto, sobretudo na ResNet.
+Sobre os 50 rótulos, foram 22 erros da ResNet, 37 do EfficientNet e 22 do ViT.
+
+\subsection*{Slide 11. Cada objeto (12:00--13:10)}
+
+O verde é acerto alto; o vermelho, acerto baixo. A amostra tem 25 mochilas, 13 teclados e 12
+garrafas. A mochila é o caso fácil da ResNet: 88\% no top-1 e 100\% no top-5. O ViT também guarda
+todas as mochilas no top-5 e acerta 60\% na 1ª posição. O teclado é a faixa vermelha. ResNet e
+EfficientNet tiveram 0\% de top-1 nessa classe. A ResNet, porém, coloca o teclado entre as 5
+primeiras em 69\% desses quadros. O ViT é o único com top-1 no teclado, 38\%, e lidera a garrafa,
+com 67\%. O EfficientNet fica em 44\% na mochila e em 17\% na garrafa.
+
+\subsection*{Slide 12. Velocidade e espera (13:10--14:00)}
+
+Os 2 gráficos estão juntos para a comparação ser imediata. À esquerda, ResNet e ViT ficam lado a
+lado na acurácia, e o EfficientNet isola o FPS. À direita, o lugar desejável seria o canto alto e
+à esquerda: muito acerto e pouca espera. Ninguém está lá. A ResNet ocupa o meio. O ViT alcança os
+mesmos 56\% e caminha para a direita, onde a latência cresce. O EfficientNet fica à esquerda,
+rápido, e mais abaixo na acurácia.
+
+\subsection*{Slide 13. Os erros têm forma (14:00--15:20)}
+
+Os erros seguem a aparência da cena. Teclado pequeno na borda faz a ResNet responder
+\texttt{space bar}. A resposta é localmente plausível, porque a barra faz parte do teclado, mas
+não é a classe pedida. Mochila escura, sem alça visível, vira \texttt{mailbag} ou colete. Quando
+garrafa e mochila dividem o quadro, o ViT pode dar mais de 80\% à garrafa mesmo com a mochila
+como objeto principal. O último cartão é o alerta: o ViT chamou uma garrafa de \texttt{safe} com
+96\% de confiança. Confiança alta não prova acerto.
+
+\subsection*{Slide 14. Webcam (15:20--16:00)}
+
+As barras repetem a ordem do vídeo. O EfficientNet chegou a 15,2 FPS, com latência p95 de 51 ms.
+A ResNet ficou em 6,1 FPS, com p95 de 168 ms. O ViT ficou em 2,8 FPS, com p95 de 342 ms. O número
+é menor do que o do vídeo porque a conta agora inclui captura, desenho e exibição. A troca pelas
+teclas 1, 2 e 3 funcionou na mesma sessão.
+
+\subsection*{Slide 15. Qual modelo levar (16:00--16:40)}
+
+3 usos, 3 cartões. A ResNet-50 é o equilíbrio desta amostra: melhor top-5 e custo intermediário.
+O ViT-B/16 vale o tempo se teclado e garrafa forem a prioridade. O EfficientNet é a escolha quando
+o quadro não pode esperar e um erro de 1ª classe pode ser revisto depois. O limite está escrito
+no slide: 50 rótulos, 1 vídeo, 1 classe por quadro e nenhuma GPU.
+
+\subsection*{Slide 16. O que fica (16:40--17:10)}
+
+A frase do slide resume o trabalho: mesma acurácia, custos diferentes. 88\% é o melhor top-5, o da
+ResNet. O EfficientNet é cerca de 7 vezes mais rápido que o ViT. E, como a cena tem 3 objetos,
+classificar o quadro inteiro já não basta. O próximo passo é detectar, para dizer onde está cada
+item. Cada rede usou a transformação oficial do próprio peso. Obrigado. As referências ficam na
+tela para as perguntas.
+
+\end{document}
