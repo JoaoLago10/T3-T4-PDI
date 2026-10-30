@@ -1,8 +1,11 @@
-# Etapa 1 — Classificação de imagens
+# Pipeline de visão — classificação, detecção, segmentação e rastreamento
 
-Este projeto compara ResNet-50, EfficientNet-B0 e ViT-B/16 pré-treinados no
-ImageNet em vídeo gravado e em webcam. Cada modelo usa sua transformação
-oficial do `torchvision`. CUDA é utilizada automaticamente quando disponível.
+O projeto compara modelos pré-treinados do `torchvision` em vídeo gravado e em
+webcam. Não há treinamento novo. CUDA é usada automaticamente quando existe.
+
+As quatro etapas usam o mesmo vídeo (`data/videos/teste.mp4`) e os 50 rótulos
+de `data/annotations/labels.csv`. A classificação fala ImageNet; as etapas
+seguintes falam COCO: `backpack`, `bottle` e `keyboard`.
 
 ## Estrutura
 
@@ -12,12 +15,12 @@ data/
 └── annotations/
     ├── labels.csv
     └── frames/
-classification/
-├── models.py
-├── run_video.py
-├── run_webcam.py
-├── evaluate.py
-└── make_annotation_template.py
+classification/     # Etapa 1
+detection/          # Etapa 2
+segmentation/       # Etapa 3
+tracking/           # Etapa 4
+pipeline/           # as três últimas em uma passagem
+common/
 outputs/
 requirements.txt
 ```
@@ -33,133 +36,123 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-As redes são baixadas automaticamente na primeira execução. A versão de
-PyTorch no `requirements.txt` funciona em CPU. Se precisar de uma variante
-CUDA específica, instale `torch==2.5.1` e `torchvision==0.20.1` usando o índice
-indicado pelo [seletor oficial do PyTorch](https://pytorch.org/get-started/locally/).
-
-Confira o dispositivo detectado:
+As redes são baixadas na primeira execução. Confira o dispositivo:
 
 ```bash
 python -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')"
 ```
 
-## 1. Preparar as anotações
+## 1. Classificação (ImageNet)
 
-Coloque o vídeo em `data/videos/` e extraia 50 frames:
+Modelos: ResNet-50, EfficientNet-B0 e ViT-B/16.
 
 ```bash
 python -m classification.make_annotation_template \
-  --video data/videos/meu_video.mp4 \
-  --num_frames 50 \
-  --frame_step 5
-```
+  --video data/videos/teste.mp4 --num_frames 50 --frame_step 5
 
-As imagens são gravadas em `data/annotations/frames/`. Preencha
-`data/annotations/labels.csv` no formato:
-
-```csv
-frame_idx,true_label
-0,coffee mug
-125,laptop
-```
-
-Os modelos reconhecem somente as 1.000 classes do ImageNet. Portanto,
-`true_label` deve ser exatamente um nome da lista oficial, incluindo espaços,
-maiúsculas e pontuação. Para procurar o nome exato por uma parte do texto:
-
-```bash
-python -c "from torchvision.models import ResNet50_Weights as W; q='mug'; print([x for x in W.IMAGENET1K_V2.meta['categories'] if q.lower() in x.lower()])"
-```
-
-Use no processamento o mesmo `--frame_step` usado para criar o template.
-Para recriar um CSV existente, acrescente `--overwrite`.
-
-## 2. Experimento A — vídeo gravado
-
-Executar os três modelos:
-
-```bash
 python -m classification.run_video \
-  --video data/videos/meu_video.mp4 \
-  --model all \
-  --frame_step 5 \
-  --topk 5
-```
+  --video data/videos/teste.mp4 --model all --frame_step 5 --topk 5
 
-Executar apenas um modelo:
-
-```bash
-python -m classification.run_video \
-  --video data/videos/meu_video.mp4 \
-  --model efficientnet
-```
-
-Para cada modelo, o script cria em `outputs/`:
-
-- `annotated_<modelo>.mp4`;
-- `predictions_<modelo>.csv`;
-- `metrics_<modelo>.json`, com parâmetros e pico de memória CUDA.
-
-São realizadas dez inferências de aquecimento por padrão. A latência CUDA é
-medida com sincronização explícita.
-
-## 3. Experimento B — webcam
-
-```bash
 python -m classification.run_webcam --model resnet50 --camera 0
+
+python -m classification.evaluate
 ```
 
-Durante a execução:
+Teclas da webcam: `1` ResNet-50, `2` EfficientNet-B0, `3` ViT-B/16, `q` sair.
 
-- `1`: ResNet-50;
-- `2`: EfficientNet-B0;
-- `3`: ViT-B/16;
-- `q`: encerrar.
+## 2. Detecção (COCO)
 
-O top-3, as confianças e o FPS de média móvel aparecem na janela. Ao sair,
-é criado `outputs/webcam_<modelo>.csv` para cada modelo utilizado.
-
-## 4. Avaliação
-
-Depois de preencher as anotações e gerar as predições:
+Modelos: Faster R-CNN ResNet-50 FPN V2, Faster R-CNN MobileNetV3 320 e
+SSDLite320 MobileNetV3.
 
 ```bash
-python -m classification.evaluate \
-  --labels data/annotations/labels.csv \
-  --predictions_dir outputs \
-  --output_dir outputs
+python -m detection.run_video \
+  --video data/videos/teste.mp4 --model all --frame_step 5
+
+python -m detection.run_webcam --model ssdlite --camera 0
+
+python -m detection.evaluate
 ```
 
-Para avaliar apenas alguns modelos:
+Teclas da webcam: `1` Faster R-CNN, `2` MobileNet, `3` SSDLite, `q` sair.
+
+A avaliação usa os 50 rótulos de quadro como verdade fraca: a classe ImageNet
+é mapeada para COCO e o recall mede se essa classe apareceu em alguma caixa.
+Não há caixas de referência manuais.
+
+Saídas em `outputs/detection/`.
+
+## 3. Segmentação
+
+Métodos: Mask R-CNN ResNet-50 FPN V2, GrabCut sobre as caixas do SSDLite e
+limiar de Otsu com morfologia sobre as mesmas caixas.
 
 ```bash
-python -m classification.evaluate --models resnet50 vit
+python -m segmentation.run_video \
+  --video data/videos/teste.mp4 --model all --frame_step 5
+
+python -m segmentation.run_webcam --model threshold --camera 0
+
+python -m segmentation.evaluate
 ```
 
-São produzidos:
+Teclas da webcam: `1` Mask R-CNN, `2` GrabCut, `3` Otsu, `q` sair.
 
-- `comparison.csv`: top-1, top-5, precisão, recall, F1 macro e eficiência;
-- `confusion_matrix_<modelo>.png`;
-- `errors_<modelo>.csv`, para análise de oclusão, iluminação e escala;
-- `accuracy_vs_fps.png`;
-- `accuracy_vs_latency.png`.
+Saídas em `outputs/segmentation/`.
 
-O FPS comparativo é calculado como `1000 / latência média em ms` e representa
-o throughput da inferência, sem incluir leitura, desenho ou gravação do vídeo.
-A avaliação considera a interseção entre os `frame_idx` anotados e preditos e
-avisa se alguma anotação não tiver predição.
+## 4. Rastreamento
 
-## Argumentos disponíveis
+O detector padrão é o SSDLite. Rastreadores: IoU guloso, centróide e Kalman
+de velocidade constante.
 
-Consulte todos os parâmetros e padrões de cada script com:
+```bash
+python -m tracking.run_video \
+  --video data/videos/teste.mp4 --tracker all --frame_step 5
+
+python -m tracking.run_webcam --tracker kalman --camera 0
+
+python -m tracking.evaluate
+```
+
+Teclas da webcam: `1` IoU, `2` centróide, `3` Kalman, `q` sair.
+
+Saídas em `outputs/tracking/`.
+
+## Pipeline completo
+
+Uma passagem: segmentação (caixas + máscaras) e rastreamento com ID estável.
+
+```bash
+python -m pipeline.run_video \
+  --video data/videos/teste.mp4 \
+  --segmenter maskrcnn \
+  --tracker kalman \
+  --frame_step 5
+
+python -m pipeline.run_webcam --segmenter threshold --tracker kalman --camera 0
+```
+
+Saídas em `outputs/pipeline/`.
+
+Em CPU, Mask R-CNN e Faster R-CNN são lentos. Para uma demo fluida da webcam,
+prefira `--model ssdlite`, `--model threshold` e `--segmenter threshold`.
+
+## Correspondência das classes
+
+| Anotação ImageNet   | Classe COCO |
+|---------------------|-------------|
+| `backpack`          | `backpack`  |
+| `water bottle`      | `bottle`    |
+| `computer keyboard` | `keyboard`  |
+
+O filtro `--scene_only` (ligado por padrão) mantém só essas três classes.
+
+## Argumentos
 
 ```bash
 python -m classification.run_video --help
-python -m classification.run_webcam --help
-python -m classification.make_annotation_template --help
-python -m classification.evaluate --help
+python -m detection.run_video --help
+python -m segmentation.run_video --help
+python -m tracking.run_video --help
+python -m pipeline.run_video --help
 ```
-
-Erros de vídeo inexistente, vídeo ilegível, codec inválido e webcam
-indisponível são reportados com mensagens explícitas.
